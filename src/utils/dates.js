@@ -15,8 +15,9 @@ export const parseIso = (iso) => {
   return new Date(y, m - 1, d)
 }
 
-// 'Jul 2023 – Present' for a project's start/end.
-export const formatRange = (start, end) => {
+// 'Jul 2023 – Present' for a project's start/end. since: 'Since Jun 2026' instead, for ongoing work.
+export const formatRange = (start, end, since = false) => {
   const fmt = (iso) => parseIso(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  if (!end && since) return `Since ${fmt(start)}`
   return `${fmt(start)} – ${end ? fmt(end) : 'Present'}`
 }

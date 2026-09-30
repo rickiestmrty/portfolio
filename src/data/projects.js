@@ -6,6 +6,7 @@ import myConsumablesLogo from '../../assets/myconsumables_lgo.svg'
 // Work shown in the sidebar, dashboard and profile. Add a new entry here to add a nav item and a page.
 // color: CSS variable used for the project's page background and its dashboard squares.
 // start/end: ISO dates (yyyy-mm-dd) from the resume. end: null means "present". start: null hides it from the activity grid.
+// since: true shows ongoing work as 'Since Jun 2026' instead of 'Jun 2026 – Present'.
 // tagline, role, stack: shown on the dashboard work cards.
 // engagement: key of `engagements` below (null hides the tag). Order of this list is the order everywhere (sidebar, cards, profile),
 // so the main job comes first and work done alongside it follows.
@@ -29,22 +30,24 @@ export const projects = [
     color: '--brand-myconsumables',
     tagline: 'A healthcare platform for pharmacies serving NDIS and Support at Home participants.',
     role: 'Mid-Level Software Engineer',
-    engagement: 'contract',
+    engagement: 'freelance',
     stack: ['Next.js', 'TypeScript', 'MUI', 'Express', 'PostgreSQL', 'Drizzle', 'AWS'],
     start: '2026-06-01',
     end: null,
+    since: true,
   },
   {
     slug: 'go-overbooked',
     name: 'Go Overbooked',
     logo: goOverbookedLogo,
     color: '--brand-go-overbooked',
-    tagline: 'Property management for small accommodation owners, with OTA calendar sync to stop double bookings.',
+    tagline: 'Founder-built SaaS PMS for small accommodation businesses, covering reservations, rates and availability, guest billing, and OTA sync.',
     role: 'Founder & Engineer',
     engagement: 'founder',
     stack: ['Vue.js', 'TypeScript', 'PrimeVue', 'Supabase', 'Express', 'Auth0', 'Vercel'],
     start: '2025-01-01',
     end: null,
+    since: true,
   },
   {
     slug: 'evstream',
@@ -64,7 +67,7 @@ export const projects = [
 // when two overlap, so the main job always reads as the primary line of work.
 export const engagements = {
   'full-time': { label: 'Full-time', rank: 0 },
-  contract: { label: 'Contract', rank: 1 },
+  freelance: { label: 'Freelance', rank: 1 },
   founder: { label: 'Own product', rank: 2 },
 }
 

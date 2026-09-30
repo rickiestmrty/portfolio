@@ -10,7 +10,7 @@ const experience = dated.filter((p) => p.engagement !== 'founder')
 const ventures = dated.filter((p) => p.engagement === 'founder')
 const workSections = [
   { title: 'Experience', items: experience },
-  { title: 'Ventures', items: ventures },
+  { title: 'Own product', items: ventures },
 ].filter((section) => section.items.length)
 
 // Every technology across all work, without duplicates, in first-seen order.
@@ -87,7 +87,7 @@ const skillGroups = [
                   </div>
                   <div class="when">
                     <span v-if="engagementLabel(p)" class="tag" :class="p.engagement">{{ engagementLabel(p) }}</span>
-                    <span class="dates">{{ formatRange(p.start, p.end) }}</span>
+                    <span class="dates">{{ formatRange(p.start, p.end, p.since) }}</span>
                   </div>
                 </div>
                 <p>{{ p.tagline }}</p>

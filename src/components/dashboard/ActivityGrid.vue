@@ -135,7 +135,7 @@ const showTip = (cell, event) => {
           <span class="swatch" :style="{ background: `var(${p.color})` }"></span>
           <span class="legend-name">{{ p.name }}</span>
           <span v-if="engagementLabel(p)" class="legend-tag">{{ engagementLabel(p) }}</span>
-          <span class="legend-meta">{{ p.start ? formatRange(p.start, p.end) : 'Dates TBD' }}</span>
+          <span class="legend-meta">{{ p.start ? formatRange(p.start, p.end, p.since) : 'Dates TBD' }}</span>
         </RouterLink>
       </li>
     </ul>

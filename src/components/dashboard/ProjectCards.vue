@@ -15,7 +15,7 @@ import { formatRange } from '@/utils/dates'
       >
         <div class="top">
           <img class="logo" :src="p.logo" alt="" aria-hidden="true" />
-          <span v-if="engagementLabel(p)" class="role">{{ engagementLabel(p) }}</span>
+          <span v-if="engagementLabel(p)" class="role" :class="p.engagement">{{ engagementLabel(p) }}</span>
         </div>
 
         <div class="text">
@@ -29,7 +29,7 @@ import { formatRange } from '@/utils/dates'
         </ul>
 
         <div class="foot">
-          <span class="meta">{{ p.start ? formatRange(p.start, p.end) : 'Dates TBD' }}</span>
+          <span class="meta">{{ p.start ? formatRange(p.start, p.end, p.since) : 'Dates TBD' }}</span>
           <span class="open">
             View demo
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
@@ -83,11 +83,16 @@ h2 {
 .role {
   padding: 3px 8px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--active);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
+}
+/* Only the main job gets the accent, so employment stands apart from freelance work and my own product. */
+.role.full-time {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .text {
   display: flex;
