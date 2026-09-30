@@ -34,6 +34,9 @@
   --ev-border-soft: rgba(255, 255, 255, 0.06);
   --ev-border-strong: rgba(255, 255, 255, 0.22);
   --ev-hover: rgba(255, 255, 255, 0.06);
+  --term-ok: #4ade80;
+  --term-info: #7dd3fc;
+  --term-warn: #fbbf24;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;

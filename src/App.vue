@@ -3,9 +3,27 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
+import IntroSequence from './components/IntroSequence.vue'
 
 const route = useRoute()
 const navOpen = ref(false)
+
+// Terminal intro plays once per browser session and is skipped for reduced motion.
+const INTRO_KEY = 'intro-seen'
+const readSeen = () => {
+  try {
+    return sessionStorage.getItem(INTRO_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const showIntro = ref(!readSeen() && !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+const onIntroDone = () => {
+  showIntro.value = false
+  try {
+    sessionStorage.setItem(INTRO_KEY, '1')
+  } catch {}
+}
 
 watch(() => route.fullPath, () => (navOpen.value = false))
 
@@ -26,6 +44,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
       </main>
     </div>
   </div>
+  <IntroSequence v-if="showIntro" @done="onIntroDone" />
 </template>
 
 <style scoped>

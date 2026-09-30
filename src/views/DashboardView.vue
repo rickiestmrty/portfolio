@@ -7,7 +7,6 @@ import { profile } from '@/data/profile'
 <template>
   <div class="page">
     <div class="head">
-      <div class="crumb">Dashboard</div>
       <h1>Hi, I'm {{ profile.firstName }}.</h1>
       <p>{{ profile.summary }}</p>
       <div class="pills">
@@ -38,11 +37,6 @@ import { profile } from '@/data/profile'
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-.crumb {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
 }
 h1 {
   margin: 0;
