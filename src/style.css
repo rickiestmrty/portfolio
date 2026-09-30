@@ -1,0 +1,77 @@
+:root {
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --surface-muted: #fbfbf9;
+  --border: #e7e6e1;
+  --border-soft: #efeee9;
+  --border-dashed: #cfcec7;
+  --text: #18181b;
+  --text-muted: #5f5e58;
+  --text-subtle: #6b6a63;
+  --accent: #1f5a4b;
+  --accent-soft: #e4e9e6;
+  --brand-go-overbooked: #007a3f;
+  --brand-at-capacity: #a6c041;
+  --brand-myconsumables: #004080;
+  --on-brand: #ffffff;
+  --on-brand-muted: rgba(255, 255, 255, 0.9);
+  --active: #eef0ec;
+  --hover: #f3f3f0;
+  --danger: #a3321f;
+  --danger-soft: #f7e9e6;
+  --warning: #8a5a0b;
+  --warning-soft: #fbf1dd;
+  --status-checked-in: #7a4fa0;
+  --status-confirmed: #2f7d62;
+  --status-pending: #b4562b;
+  --today: #fdf6e7;
+  --ev-bg: #0a0d12;
+  --ev-surface: #0f1218;
+  --ev-text: #ffffff;
+  --ev-text-muted: rgba(255, 255, 255, 0.64);
+  --ev-text-subtle: rgba(255, 255, 255, 0.46);
+  --ev-border: rgba(255, 255, 255, 0.1);
+  --ev-border-soft: rgba(255, 255, 255, 0.06);
+  --ev-border-strong: rgba(255, 255, 255, 0.22);
+  --ev-hover: rgba(255, 255, 255, 0.06);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --header-h: 64px;
+  --sidebar-w: 260px;
+  --font: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
