@@ -2,6 +2,8 @@
 import { computed, reactive, ref, watch } from 'vue'
 import DispatchModal from '@/components/my-consumables/DispatchModal.vue'
 import WorkflowPanel from '@/components/my-consumables/WorkflowPanel.vue'
+import ProjectDemo from '@/components/ProjectDemo.vue'
+import ProjectCaseStudy from '@/components/ProjectCaseStudy.vue'
 import { drivers, orders as seed, statuses } from '@/data/myConsumables'
 
 defineProps({ title: { type: String, required: true } })
@@ -110,158 +112,162 @@ const onSend = ({ id, driver }) => {
       <p>
         A healthcare platform for pharmacies that serve NDIS and Support at Home participants. I worked with a
         cross-functional team to turn the pharmacy’s daily routine into software that is simple to use and hard to
-        break. Below is a demo of special orders. Confirm an order, pack it, then send it to a driver.
+        break.
       </p>
     </div>
 
-    <div class="stack-toolbar">
-      <button type="button" role="switch" class="switch" :aria-checked="showWorkflow" @click="showWorkflow = !showWorkflow">
-        <span class="knob" aria-hidden="true"></span>
-        Show the workflow
-      </button>
-      <span class="hint">{{
-        showWorkflow
-          ? 'Each step answers a real need from the pharmacy. Move an order and watch it land in the audit trail.'
-          : 'See the business need behind each step, and what I built for it.'
-      }}</span>
-    </div>
-
-    <Transition name="reveal">
-      <WorkflowPanel v-if="showWorkflow" :counts="counts" :events="events" />
-    </Transition>
-
-    <div class="toolbar">
-      <label class="search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        <input v-model="query" type="search" placeholder="Search by order number, patient, product or supplier" aria-label="Search orders" />
-      </label>
-      <div class="tabs" role="tablist" aria-label="Filter by status">
-        <button
-          v-for="t in tabs"
-          :key="t.key"
-          type="button"
-          role="tab"
-          :aria-selected="statusFilter === t.key"
-          :class="{ on: statusFilter === t.key }"
-          @click="statusFilter = t.key"
-        >
-          {{ t.label }}
-          <span class="count">{{ t.count }}</span>
+    <ProjectDemo title="Try special orders" intro="Confirm an order, pack it, then send it to a driver.">
+      <div class="stack-toolbar">
+        <button type="button" role="switch" class="switch" :aria-checked="showWorkflow" @click="showWorkflow = !showWorkflow">
+          <span class="knob" aria-hidden="true"></span>
+          Show the workflow
         </button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Item</th>
-              <th>Supplier</th>
-              <th>Expected</th>
-              <th>Received</th>
-              <th>Status</th>
-              <th class="right">
-                Action
-                <span v-if="showWorkflow" class="tag">one next step</span>
-              </th>
-              <th class="chev-col"><span class="sr">Details</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="o in rows" :key="o.id">
-              <tr class="order" :class="{ open: expanded.has(o.id) }">
-                <td class="c-patient">
-                  <div class="patient">
-                    <span class="avatar" :style="{ '--c': `var(${tint(o.patient)})` }" aria-hidden="true">{{ initials(o.patient) }}</span>
-                    <div class="stack">
-                      <span class="strong ellipsis">{{ o.patient }}</span>
-                      <span class="muted">{{ o.phone }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="c-item">
-                  <div class="stack">
-                    <span class="strong ellipsis item">
-                      <svg v-if="o.items[0].cold" class="cold" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Cold chain"><path d="M12 2v20M4.9 7l14.2 10M4.9 17 19.1 7" /></svg>
-                      {{ o.items[0].name }}
-                    </span>
-                    <span class="muted">
-                      <button v-if="o.items.length > 1" type="button" class="more" @click="toggle(o.id)">+{{ o.items.length - 1 }} more</button>
-                      <template v-if="o.items.length > 1"> · </template>{{ o.id }} · {{ o.items[0].qty }}
-                    </span>
-                  </div>
-                </td>
-                <td class="c-supplier strong ellipsis" data-label="Supplier">{{ o.supplier }}</td>
-                <td class="c-expected num" data-label="Expected">{{ fmtDate(o.expected) }}</td>
-                <td class="c-received num muted" data-label="Received">{{ fmtDate(o.received) }}</td>
-                <td class="c-status">
-                  <span class="status" :style="{ '--c': `var(${statuses[o.status].color})` }">{{ statuses[o.status].label }}</span>
-                </td>
-                <td class="c-action right">
-                  <button type="button" class="action" :class="{ ghost: o.status === 'dispatched' }" @click="act(o)">
-                    {{ statuses[o.status].action }}
-                  </button>
-                </td>
-                <td class="c-chev chev-col">
-                  <button type="button" class="chev" :aria-expanded="expanded.has(o.id)" :aria-label="`Details for ${o.id}`" @click="toggle(o.id)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="expanded.has(o.id)" class="detail">
-                <td colspan="8">
-                  <div class="detail-grid">
-                    <div>
-                      <div class="label">Items</div>
-                      <ul>
-                        <li v-for="i in o.items" :key="i.name">
-                          <span>{{ i.name }}<span v-if="i.cold" class="cold-tag">Cold chain</span></span>
-                          <span class="num">× {{ i.qty }}</span>
-                        </li>
-                      </ul>
-                    </div>
-                    <div>
-                      <div class="label">Deliver to</div>
-                      <div>{{ o.address.line }}</div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </template>
-            <tr v-if="!rows.length">
-              <td colspan="8" class="empty">No orders match your search.</td>
-            </tr>
-          </tbody>
-        </table>
+        <span class="hint">{{
+          showWorkflow
+            ? 'Each step answers a real need from the pharmacy. Move an order and watch it land in the audit trail.'
+            : 'See the business need behind each step, and what I built for it.'
+        }}</span>
       </div>
 
-      <footer class="pager">
-        <span class="muted">{{ rangeLabel }}</span>
-        <nav class="pages" aria-label="Pagination">
-          <button type="button" class="pg" :disabled="page === 1" aria-label="Previous page" @click="page--">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-          </button>
+      <Transition name="reveal">
+        <WorkflowPanel v-if="showWorkflow" :counts="counts" :events="events" />
+      </Transition>
+
+      <div class="toolbar">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input v-model="query" type="search" placeholder="Search by order number, patient, product or supplier" aria-label="Search orders" />
+        </label>
+        <div class="tabs" role="tablist" aria-label="Filter by status">
           <button
-            v-for="n in pageCount"
-            :key="n"
+            v-for="t in tabs"
+            :key="t.key"
             type="button"
-            class="pg"
-            :class="{ on: page === n }"
-            :aria-current="page === n ? 'page' : undefined"
-            @click="page = n"
+            role="tab"
+            :aria-selected="statusFilter === t.key"
+            :class="{ on: statusFilter === t.key }"
+            @click="statusFilter = t.key"
           >
-            {{ n }}
+            {{ t.label }}
+            <span class="count">{{ t.count }}</span>
           </button>
-          <button type="button" class="pg" :disabled="page === pageCount" aria-label="Next page" @click="page++">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-          </button>
-        </nav>
-      </footer>
-    </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Item</th>
+                <th>Supplier</th>
+                <th>Expected</th>
+                <th>Received</th>
+                <th>Status</th>
+                <th class="right">
+                  Action
+                  <span v-if="showWorkflow" class="tag">one next step</span>
+                </th>
+                <th class="chev-col"><span class="sr">Details</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="o in rows" :key="o.id">
+                <tr class="order" :class="{ open: expanded.has(o.id) }">
+                  <td class="c-patient">
+                    <div class="patient">
+                      <span class="avatar" :style="{ '--c': `var(${tint(o.patient)})` }" aria-hidden="true">{{ initials(o.patient) }}</span>
+                      <div class="stack">
+                        <span class="strong ellipsis">{{ o.patient }}</span>
+                        <span class="muted">{{ o.phone }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="c-item">
+                    <div class="stack">
+                      <span class="strong ellipsis item">
+                        <svg v-if="o.items[0].cold" class="cold" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Cold chain"><path d="M12 2v20M4.9 7l14.2 10M4.9 17 19.1 7" /></svg>
+                        {{ o.items[0].name }}
+                      </span>
+                      <span class="muted">
+                        <button v-if="o.items.length > 1" type="button" class="more" @click="toggle(o.id)">+{{ o.items.length - 1 }} more</button>
+                        <template v-if="o.items.length > 1"> · </template>{{ o.id }} · {{ o.items[0].qty }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="c-supplier strong ellipsis" data-label="Supplier">{{ o.supplier }}</td>
+                  <td class="c-expected num" data-label="Expected">{{ fmtDate(o.expected) }}</td>
+                  <td class="c-received num muted" data-label="Received">{{ fmtDate(o.received) }}</td>
+                  <td class="c-status">
+                    <span class="status" :style="{ '--c': `var(${statuses[o.status].color})` }">{{ statuses[o.status].label }}</span>
+                  </td>
+                  <td class="c-action right">
+                    <button type="button" class="action" :class="{ ghost: o.status === 'dispatched' }" @click="act(o)">
+                      {{ statuses[o.status].action }}
+                    </button>
+                  </td>
+                  <td class="c-chev chev-col">
+                    <button type="button" class="chev" :aria-expanded="expanded.has(o.id)" :aria-label="`Details for ${o.id}`" @click="toggle(o.id)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="expanded.has(o.id)" class="detail">
+                  <td colspan="8">
+                    <div class="detail-grid">
+                      <div>
+                        <div class="label">Items</div>
+                        <ul>
+                          <li v-for="i in o.items" :key="i.name">
+                            <span>{{ i.name }}<span v-if="i.cold" class="cold-tag">Cold chain</span></span>
+                            <span class="num">× {{ i.qty }}</span>
+                          </li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div class="label">Deliver to</div>
+                        <div>{{ o.address.line }}</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr v-if="!rows.length">
+                <td colspan="8" class="empty">No orders match your search.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="pager">
+          <span class="muted">{{ rangeLabel }}</span>
+          <nav class="pages" aria-label="Pagination">
+            <button type="button" class="pg" :disabled="page === 1" aria-label="Previous page" @click="page--">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <button
+              v-for="n in pageCount"
+              :key="n"
+              type="button"
+              class="pg"
+              :class="{ on: page === n }"
+              :aria-current="page === n ? 'page' : undefined"
+              @click="page = n"
+            >
+              {{ n }}
+            </button>
+            <button type="button" class="pg" :disabled="page === pageCount" aria-label="Next page" @click="page++">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+          </nav>
+        </footer>
+      </div>
+    </ProjectDemo>
 
     <DispatchModal :order="dispatching" :show-workflow="showWorkflow" @close="dispatching = null" @send="onSend" />
+
+    <ProjectCaseStudy slug="myconsumables" title="What I’m working on" />
   </div>
 </template>
 

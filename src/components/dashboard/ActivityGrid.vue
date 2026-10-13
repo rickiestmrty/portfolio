@@ -25,9 +25,25 @@ const activeOn = (day) =>
     .filter((r) => dayDiff(r.from, day) >= 0 && dayDiff(day, r.to) >= 0)
     .sort((a, b) => rank(a) - rank(b))
 
-// A square takes the color of the primary work that day. Contract work and own products
-// alongside the main job are listed in the tooltip rather than splitting the square.
-const fill = (active) => (active.length ? `var(${active[0].color})` : null)
+const isFreelance = (p) => p.engagement === 'freelance'
+const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6
+
+// A square takes the color of the primary work that day. Freelance work done alongside the main job
+// takes the second half of the square. Own products are listed in the tooltip rather than splitting it.
+const fill = (active) => {
+  if (!active.length) return null
+  const main = `var(${active[0].color})`
+  const freelance = active.find(isFreelance)
+  if (!freelance || freelance === active[0]) return main
+  return `linear-gradient(135deg, ${main} 50%, var(${freelance.color}) 50%)`
+}
+
+const fullTime = projects.find((p) => p.engagement === 'full-time')
+const freelanceWork = projects.find(isFreelance)
+const splitSwatch =
+  fullTime && freelanceWork
+    ? `linear-gradient(135deg, var(${fullTime.color}) 50%, var(${freelanceWork.color}) 50%)`
+    : null
 
 const describe = (p) => (engagementLabel(p) ? `${p.name} (${engagementLabel(p).toLowerCase()})` : p.name)
 
@@ -43,6 +59,8 @@ const weeks = computed(() => {
       const day = addDays(gridStart, w * 7 + d)
       if (day.getFullYear() !== year.value) return { key: `${w}-${d}`, blank: true }
       const future = dayDiff(today, day) > 0
+      // Weekends are never counted as work days, whatever the date ranges say.
+      if (isWeekend(day)) return { key: `${w}-${d}`, day, weekend: true, future, active: [] }
       const active = future ? [] : activeOn(day)
       return { key: `${w}-${d}`, day, future, active, background: fill(active) }
     }),
@@ -57,7 +75,7 @@ const monthLabels = computed(() =>
   }),
 )
 
-const activeDays = computed(() => weeks.value.flat().filter((c) => c.active?.length).length)
+const weekdaysWorked = computed(() => weeks.value.flat().filter((c) => c.active?.length).length)
 
 const formatDay = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -70,7 +88,7 @@ const showTip = (cell, event) => {
     x: box.left - wrap.left + box.width / 2,
     y: box.top - wrap.top,
     date: formatDay(cell.day),
-    label: cell.active.length ? cell.active[0].name : 'No work logged',
+    label: cell.weekend ? 'Weekend' : cell.active.length ? cell.active[0].name : 'No work logged',
     also: cell.active.slice(1).map(describe).join(', '),
   }
 }
@@ -80,8 +98,8 @@ const showTip = (cell, event) => {
   <section class="card">
     <div class="top">
       <div>
-        <h2>{{ activeDays }} days building in {{ year }}</h2>
-        <p>Every square is a day of work, colored by my main role that day.</p>
+        <h2>Timeline · {{ weekdaysWorked }} weekdays worked in {{ year }}</h2>
+        <p>Each square is a weekday, colored by my main role. A split square means freelance work on top of it.</p>
       </div>
       <div class="years" role="tablist" aria-label="Year">
         <button
@@ -114,7 +132,7 @@ const showTip = (cell, event) => {
                 v-for="cell in week"
                 :key="cell.key"
                 class="cell"
-                :class="{ blank: cell.blank, future: cell.future }"
+                :class="{ blank: cell.blank, future: cell.future, weekend: cell.weekend }"
                 :style="cell.background ? { background: cell.background } : null"
                 @mouseenter="showTip(cell, $event)"
               ></span>
@@ -137,6 +155,16 @@ const showTip = (cell, event) => {
           <span v-if="engagementLabel(p)" class="legend-tag">{{ engagementLabel(p) }}</span>
           <span class="legend-meta">{{ p.start ? formatRange(p.start, p.end, p.since) : 'Dates TBD' }}</span>
         </RouterLink>
+      </li>
+      <li v-if="splitSwatch" class="legend-item">
+        <span class="swatch" :style="{ background: splitSwatch }"></span>
+        <span class="legend-name">Full-time + freelance</span>
+        <span class="legend-meta">Same weekday</span>
+      </li>
+      <li class="legend-item">
+        <span class="swatch weekend"></span>
+        <span class="legend-name">Weekend</span>
+        <span class="legend-meta">Not counted</span>
       </li>
     </ul>
   </section>
@@ -200,7 +228,7 @@ h2 {
   overflow-x: auto;
 }
 .grid {
-  --cell: 12px;
+  --cell: 10px;
   --gap: 3px;
   display: flex;
   gap: 8px;
@@ -249,6 +277,7 @@ h2 {
 .cell.blank {
   visibility: hidden;
 }
+.cell.weekend,
 .cell.future {
   background: var(--surface-muted);
   box-shadow: inset 0 0 0 1px var(--border-soft);
@@ -287,6 +316,10 @@ h2 {
   width: 12px;
   height: 12px;
   border-radius: 3px;
+}
+.swatch.weekend {
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 .legend-name {
   font-weight: 500;

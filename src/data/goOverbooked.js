@@ -26,7 +26,7 @@ export const bookings = [
     guests: 4,
     nightlyRate: 3200,
     notes:
-      'Owns Go Overbooked end to end, from product direction and engineering to customer onboarding and sales demos. Built a no-signup demo mode so prospective hotels can explore the full product before committing.',
+      'Owns Go Overbooked end to end, from product and engineering to sales, marketing and support. Wrote about 590 of its 600 commits across four repos. Built a no-signup demo mode so hotels and recruiters can try the full product.',
   },
   {
     id: 'GO-10241',
@@ -40,7 +40,7 @@ export const bookings = [
     guests: 6,
     nightlyRate: 4500,
     notes:
-      'Founded Go Overbooked and took it from concept to production. Defined the product for small and independent hotels, designed the architecture and data model, and shipped the first release to paying properties.',
+      'Started building Go Overbooked in June 2025, after two families arrived at my family’s guesthouse for the same room. Designed the product, architecture and data model for properties with 3 to 20 rooms. 50 properties, 83 users and 789 reservations in production as of September 2026.',
   },
   {
     id: 'GO-10247',
@@ -54,7 +54,7 @@ export const bookings = [
     guests: 2,
     nightlyRate: 2400,
     notes:
-      'Built the hotel management web app with Vue 3, TypeScript, PrimeVue, and Supabase, covering reservations, room inventory and rates, the dashboard, and a wallet and ledger finance module. Also built the guest-facing booking widget and the marketing site.',
+      'Built the PMS app with Vue 3, TypeScript, Pinia and PrimeVue, plus the guest booking engine and the marketing site. The backend is Supabase: Postgres with row-level security, 121 SQL migrations and 20 edge functions. Auth0 sign-in is exchanged for Supabase JWTs, so every row is scoped to the caller’s hotel.',
   },
   {
     id: 'GO-10252',
@@ -68,7 +68,7 @@ export const bookings = [
     guests: 2,
     nightlyRate: 2400,
     notes:
-      'Automated two-way OTA sync with Booking.com, Expedia, Agoda, and Airbnb through a white-label channel manager, keeping rates and availability aligned to prevent double bookings. Set up automated guest reminder emails, daily staff summaries, and a partner API that posts POS charges to guest folios.',
+      'Built two-way OTA sync through Channex. An outbox and a pg_cron job batch each hotel’s changes into one request, which keeps it under the limit of 20 requests a minute. Also built scheduled email and SMS reminders, and a signed, idempotent partner API that posts POS charges to guest bills.',
   },
   {
     id: 'GO-10259',
@@ -83,7 +83,7 @@ export const bookings = [
     nightlyRate: 3200,
     brand: true,
     notes:
-      'Sells Go Overbooked directly to small property owners in the Philippines. Runs the sales demos, onboards new properties, and turns their feedback into the product roadmap.',
+      'Sells Go Overbooked directly to small property owners in the Philippines on a freemium plan. Runs the sales demos, onboards new properties, answers support, and turns their feedback into the product roadmap.',
   },
 ]
 
@@ -106,3 +106,167 @@ export const demoGuests = [
   { name: 'Bea Mendoza', count: 5 },
   { name: 'Liam O’Connor', count: 2 },
 ]
+
+// Case study under the demo. Facts from the founder brief. Update `traction` when the numbers move.
+export const links = {
+  app: 'https://app.gooverbooked.com',
+  landing: 'https://gooverbooked.com',
+  founderStory: 'https://gooverbooked.com/founder-story',
+  exampleSite: 'https://nandfguesthouse.gooverbooked.com',
+}
+
+export const traction = {
+  asOf: 'Sep 30, 2026',
+  stats: [
+    { value: '50', label: 'Properties' },
+    { value: '83', label: 'Users' },
+    { value: '789', label: 'Reservations' },
+    { value: '98%', label: 'Of the 600 commits are mine' },
+  ],
+}
+
+// Engineering highlights, most relevant to full stack roles first.
+// summary: the one line that says what it does. points: how it works. link: optional, for highlights a visitor can try.
+export const highlights = [
+  {
+    id: 'channel-sync',
+    name: 'OTA channel sync',
+    title: 'Two-way OTA sync that stays under the rate limit',
+    summary: 'Price and availability edits reach the OTAs through Channex in batches, which keeps the system under Channex’s limit of 20 requests a minute.',
+    points: [
+      'Local price and availability changes are written to an outbox table.',
+      'A pg_cron job drains the outbox every minute and merges each hotel’s pending changes into one Channex call. Ten price edits become one request.',
+      'When Channex rate-limits, the job retries with exponential backoff. It also caps how much work it does per run.',
+      'Incoming OTA bookings are polled and imported into the PMS calendar.',
+    ],
+    tech: ['Supabase', 'PostgreSQL', 'pg_cron', 'Channex API'],
+  },
+  {
+    id: 'pos-api',
+    name: 'Partner POS API',
+    title: 'Signed, idempotent API for restaurant and bar charges',
+    summary: 'Partner POS systems post restaurant and bar tickets onto a hotel guest’s bill. A retried request never charges twice.',
+    points: [
+      'Partners sign every request with HMAC-SHA256 and send an idempotency key, so retries are safe.',
+      'Zod validates each request.',
+      'Posting an invoice updates the reservation’s balance, its payment records and the hotel’s wallet ledger. Refunds are supported.',
+      'Vitest tests cover replays, lookup failures, currency mismatches and the reconciliation math.',
+    ],
+    tech: ['Node.js', 'Express', 'TypeScript', 'Zod', 'Vitest'],
+  },
+  {
+    id: 'auth',
+    name: 'Multi-tenant auth',
+    title: 'Auth0 sign-in, hotel-scoped data in Postgres',
+    summary: 'Row-level security scopes every row to the caller’s hotel, resolved from a verified token.',
+    points: [
+      'An edge function exchanges the Auth0 ID token for a Supabase-signed JWT and caches it.',
+      'Postgres row-level security and helper functions resolve the caller’s hotel from the verified token.',
+      'Custom roles and permissions per property, team invites and multi-property support.',
+    ],
+    tech: ['Auth0', 'OAuth 2.0', 'Supabase', 'Row-level security'],
+  },
+  {
+    id: 'demo-mode',
+    name: 'Demo mode',
+    title: 'The full product, no account needed',
+    summary: 'Prospects and recruiters can use every screen of the real app with sample data and a guided tour.',
+    points: [
+      'One data-access composable, useHotelData, feeds every screen from either Supabase or a realistic in-memory dataset.',
+      'Because screens read through the same composable either way, the demo is the real app, not a mock-up.',
+      'A guided tour walks first-time visitors through it.',
+    ],
+    tech: ['Vue 3', 'Composition API', 'TypeScript'],
+    link: { label: 'Open the live demo', href: links.app },
+  },
+  {
+    id: 'plans',
+    name: 'Plan gating',
+    title: 'Feature tiers, trials and automatic downgrades',
+    summary: 'Free, Plus and Pro features are gated in one place, and expired hotels are downgraded on a schedule.',
+    points: [
+      'A usePlan composable and a gate overlay component decide which features each tier can use.',
+      'Trial periods are built in.',
+      'A scheduled job downgrades hotels whose plan has expired.',
+    ],
+    tech: ['Vue 3', 'TypeScript', 'pg_cron'],
+  },
+  {
+    id: 'messages',
+    name: 'Automated messages',
+    title: 'Scheduled email and SMS for guests and staff',
+    summary: 'Booking confirmations, stay reminders and account nudges go out automatically by email and SMS.',
+    points: [
+      'Scheduled edge functions send booking confirmations and rejections.',
+      'Pre-arrival and checkout reminders go to staff and guests by email and SMS.',
+      'Hotels get onboarding nudges and billing reminders.',
+    ],
+    tech: ['Edge functions', 'pg_cron', 'Resend', 'UniSMS'],
+  },
+]
+
+// System map: what each repo and service does. tech is shown as one line, joined with ' · '. Empty when not worth listing.
+export const architecture = [
+  {
+    name: 'Apps',
+    items: [
+      { name: 'overbooked-web', what: 'The PMS app for hotel staff.', tech: ['Vue 3', 'TypeScript', 'Pinia', 'PrimeVue', 'Vite', 'Vercel'] },
+      { name: 'overbooked-booking', what: 'Public booking engine. Guests pick rooms, enter details and upload proof of payment.', tech: [] },
+      { name: 'overbooked-landing-page', what: 'Marketing site with a blog, pricing page, founder story and funnel tracking.', tech: [] },
+    ],
+  },
+  {
+    name: 'Backend',
+    items: [
+      { name: 'Supabase', what: 'PostgreSQL with row-level security. 121 SQL migrations.', tech: ['PostgreSQL', 'RLS'] },
+      { name: 'Edge functions', what: '20 functions, including the Auth0 token exchange and scheduled messages, plus pg_cron jobs.', tech: ['Deno', 'pg_cron'] },
+      { name: 'overbooked-external-api', what: 'REST API for partner POS systems.', tech: ['Node.js', 'Express', 'TypeScript'] },
+    ],
+  },
+  {
+    name: 'Services',
+    items: [
+      { name: 'Auth0', what: 'Sign-in with OAuth 2.0.', tech: [] },
+      { name: 'Channex', what: 'Channel manager for OTA sync.', tech: [] },
+      { name: 'Resend', what: 'Email.', tech: [] },
+      { name: 'UniSMS', what: 'SMS.', tech: [] },
+    ],
+  },
+]
+
+export const features = [
+  'Dashboard: occupancy, revenue, repeat guests, nights sold, weather',
+  'Today’s check-ins and check-outs',
+  'Booking calendar and list',
+  'Room types with per-day, rate-aware pricing',
+  'Discounts',
+  'Availability blocking',
+  'Public booking engine',
+  'Website builder',
+  'Guest booking status lookup',
+  'Wallets and ledger',
+  'Income and expense categories',
+  'Receipts and PDF generation',
+  'Activity and audit log',
+  'Supplies inventory',
+  'Housekeeping room status',
+  'Team roles',
+  'Admin console',
+]
+
+// Freemium pricing, and the work outside the code. price/what: null hides that line.
+export const business = {
+  plans: [
+    { name: 'Free', price: 'Free forever', what: 'The core app' },
+    { name: 'Plus', price: '$7/mo or ₱350/mo', what: null },
+    { name: 'Website Builder', price: 'Add-on', what: 'A booking website for the property' },
+    { name: 'Pro', price: null, what: 'OTA channel sync and multi-property support' },
+  ],
+  work: [
+    'Product, sales, marketing and support',
+    'Funnel and upsell event tracking',
+    'Onboarding nudges 24 hours and 1 week after signup',
+    'SEO blog',
+    'Launch and ad videos made with Remotion',
+  ],
+}

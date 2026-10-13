@@ -8,11 +8,11 @@ import IntroSequence from './components/IntroSequence.vue'
 const route = useRoute()
 const navOpen = ref(false)
 
-// Terminal intro plays once per browser session and is skipped for reduced motion.
+// Terminal intro plays once per browser (a localStorage flag) and is skipped for reduced motion.
 const INTRO_KEY = 'intro-seen'
 const readSeen = () => {
   try {
-    return sessionStorage.getItem(INTRO_KEY) === '1'
+    return localStorage.getItem(INTRO_KEY) === '1'
   } catch {
     return false
   }
@@ -21,7 +21,7 @@ const showIntro = ref(!readSeen() && !window.matchMedia('(prefers-reduced-motion
 const onIntroDone = () => {
   showIntro.value = false
   try {
-    sessionStorage.setItem(INTRO_KEY, '1')
+    localStorage.setItem(INTRO_KEY, '1')
   } catch {}
 }
 

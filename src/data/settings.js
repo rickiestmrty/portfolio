@@ -1,8 +1,11 @@
-// Hiring preferences on the Settings page. All amounts are PHP per month.
+// Hiring preferences on the Hire me page. All amounts are PHP per month.
 
 export const PHP_PER_USD = 62
 
 export const baseSalary = 90000
+
+// The page shows the expected salary as a range of +/- this share. The exact figure only goes out by email.
+export const rangeSpread = 0.1
 
 // Range of the offer slider.
 export const offerRange = { min: 20000, max: 200000, step: 1000 }
@@ -54,10 +57,6 @@ export const teamSizes = [
 export const meetings = { max: 20, included: 8, complaintAbove: 10, premiumPerMeeting: 1000 }
 
 export const takeHome = { max: 12, warnAbove: 4 }
-
-export const weekendPremium = 20000
-
-export const familyTax = 10000
 
 // Checked from the lowest threshold up. The first match wins.
 export const lowOfferNotices = [

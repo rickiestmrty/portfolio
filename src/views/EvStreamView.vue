@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import OddsTable from '@/components/evstream/OddsTable.vue'
 import BetModal from '@/components/evstream/BetModal.vue'
 import PipelinePanel from '@/components/evstream/PipelinePanel.vue'
+import ProjectDemo from '@/components/ProjectDemo.vue'
+import ProjectCaseStudy from '@/components/ProjectCaseStudy.vue'
 import { bookies, race, runners } from '@/data/evstream'
 
 defineProps({ title: { type: String, required: true } })
@@ -18,19 +20,30 @@ const snap = (odds) => {
 const rand = (min, max) => min + Math.random() * (max - min)
 
 // prices[runnerId][bookieId] = { odds, open, dir, flashId }
+// open is the bookie's opening price. The market has already moved off it by the time the board loads,
+// so the change column shows real movement from the first paint instead of 0.0% everywhere.
 const prices = reactive(
   Object.fromEntries(
     runners.map((r) => [
       r.id,
       Object.fromEntries(
         bookies.map((b) => {
-          const odds = snap(r.open * rand(0.92, 1.08))
-          return [b.id, { odds, open: odds, dir: null, flashId: 0 }]
+          const open = snap(r.open * rand(0.96, 1.04))
+          let odds = snap(open * rand(0.88, 1.14))
+          if (odds === open) odds = snap(open + stepFor(open))
+          return [b.id, { odds, open, dir: null, flashId: 0 }]
         }),
       ),
     ]),
   ),
 )
+
+// Money comes in on some runners and leaves others. A runner's trend nudges every bookie's price the same way
+// for a while, so shortening and drifting runners show up on the board over time.
+const trend = reactive(Object.fromEntries(runners.map((r) => [r.id, 0])))
+const rerollTrends = () => {
+  for (const r of runners) trend[r.id] = Math.random() < 0.4 ? 0 : rand(-0.3, 0.3)
+}
 
 const flashTimers = new Map()
 
@@ -43,9 +56,10 @@ const moveOne = () => {
   const bookie = bookies[Math.floor(Math.random() * bookies.length)]
   const cell = prices[runner.id][bookie.id]
 
-  // Pull back toward the opening price so the market does not wander off.
+  // Follow the runner's trend, and pull back toward the opening price so the market does not wander off.
   const drift = cell.odds / cell.open
-  const upChance = drift > 1.4 ? 0.2 : drift < 0.7 ? 0.8 : 0.5
+  const pull = drift > 1.5 ? -0.3 : drift < 0.65 ? 0.3 : 0
+  const upChance = Math.min(0.9, Math.max(0.1, 0.5 + trend[runner.id] + pull))
   const up = Math.random() < upChance
   let next = snap(cell.odds * (up ? 1 + rand(0.02, 0.08) : 1 - rand(0.02, 0.08)))
   if (next === cell.odds) next = snap(cell.odds + (up ? 1 : -1) * stepFor(cell.odds))
@@ -87,11 +101,12 @@ const live = ref(true)
 const showStack = ref(false)
 const bets = ref([])
 let tickTimer = null
+let trendTimer = null
 const schedule = () => {
   tickTimer = setTimeout(() => {
-    if (live.value) moveOne()
+    if (live.value) for (let i = Math.ceil(rand(0, 3)); i > 0; i--) moveOne()
     schedule()
-  }, rand(250, 1200))
+  }, rand(300, 900))
 }
 
 const secondsLeft = ref(race.jumpsInSeconds)
@@ -103,6 +118,8 @@ const jumpsIn = computed(() => {
 })
 
 onMounted(() => {
+  rerollTrends()
+  trendTimer = setInterval(rerollTrends, 8000)
   schedule()
   clockTimer = setInterval(() => {
     secondsLeft.value = secondsLeft.value > 0 ? secondsLeft.value - 1 : race.jumpsInSeconds
@@ -110,6 +127,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   clearTimeout(tickTimer)
+  clearInterval(trendTimer)
   clearInterval(clockTimer)
   flashTimers.forEach(clearTimeout)
 })
@@ -126,64 +144,70 @@ const selectedCell = computed(() => selected.value && prices[selected.value.runn
       <h1>{{ title }}</h1>
       <p>
         A betting intelligence app I built with the product owner. It watches Australian bookmakers in real time so
-        punters can find the best price. The board below is a live demo. Click any price to place a pretend bet.
+        punters can find the best price.
       </p>
     </div>
 
-    <div class="stack-toolbar">
-      <button type="button" role="switch" class="switch big" :aria-checked="showStack" @click="showStack = !showStack">
-        <span class="knob" aria-hidden="true"></span>
-        Show the pipeline
-      </button>
-      <span class="hint">{{
-        showStack
-          ? 'Every price below travels through these services. Watch them light up as the odds move.'
-          : 'See the services I built behind each number.'
-      }}</span>
-    </div>
-
-    <Transition name="reveal">
-      <PipelinePanel
-        v-if="showStack"
-        :bookies="bookies"
-        :scrapers="scrapers"
-        :last-event="lastEvent"
-        :top-pick="topPick"
-        :bets="bets"
-      />
-    </Transition>
-
-    <section class="race">
-      <div class="race-top">
-        <div class="race-title">
-          <h2>{{ race.name }}</h2>
-          <span class="jump" :aria-label="`Jumps in ${jumpsIn}`">{{ jumpsIn }}</span>
-        </div>
-        <div class="race-meta">Win {{ race.win }} · Place {{ race.place }} · {{ runners.length }} runners</div>
-      </div>
-
-      <div class="toolbar">
-        <div class="legend">
-          <span class="legend-label">Movements</span>
-          <span class="chip up">Longer</span>
-          <span class="chip down">Shorter</span>
-        </div>
-        <button type="button" role="switch" class="switch" :aria-checked="live" @click="live = !live">
+    <ProjectDemo
+      title="Watch the odds board"
+      label="Interactive demo · simulated odds"
+      intro="Prices move live. Click any price to place a pretend bet."
+    >
+      <div class="stack-toolbar">
+        <button type="button" role="switch" class="switch big" :aria-checked="showStack" @click="showStack = !showStack">
           <span class="knob" aria-hidden="true"></span>
-          Live
+          Show the pipeline
         </button>
+        <span class="hint">{{
+          showStack
+            ? 'Every price below travels through these services. Watch them light up as the odds move.'
+            : 'See the services I built behind each number.'
+        }}</span>
       </div>
 
-      <OddsTable
-        :runners="runners"
-        :bookies="bookies"
-        :prices="prices"
-        :yields="yields"
-        :selected="selected"
-        :show-stack="showStack"
-        @select="selected = $event"
-      />
-    </section>
+      <Transition name="reveal">
+        <PipelinePanel
+          v-if="showStack"
+          :bookies="bookies"
+          :scrapers="scrapers"
+          :last-event="lastEvent"
+          :top-pick="topPick"
+          :bets="bets"
+        />
+      </Transition>
+
+      <section class="race">
+        <div class="race-top">
+          <div class="race-title">
+            <h2>{{ race.name }}</h2>
+            <span class="jump" :aria-label="`Jumps in ${jumpsIn}`">{{ jumpsIn }}</span>
+          </div>
+          <div class="race-meta">Win {{ race.win }} · Place {{ race.place }} · {{ runners.length }} runners</div>
+        </div>
+
+        <div class="toolbar">
+          <div class="legend">
+            <span class="legend-label">Movements</span>
+            <span class="chip up">Longer</span>
+            <span class="chip down">Shorter</span>
+          </div>
+          <button type="button" role="switch" class="switch" :aria-checked="live" @click="live = !live">
+            <span class="knob" aria-hidden="true"></span>
+            Live
+          </button>
+        </div>
+
+        <OddsTable
+          :runners="runners"
+          :bookies="bookies"
+          :prices="prices"
+          :yields="yields"
+          :selected="selected"
+          :show-stack="showStack"
+          @select="selected = $event"
+        />
+      </section>
+    </ProjectDemo>
 
     <BetModal
       :runner="selected?.runner"
@@ -194,6 +218,8 @@ const selectedCell = computed(() => selected.value && prices[selected.value.runn
       @place="bets.push($event)"
       @close="selected = null"
     />
+
+    <ProjectCaseStudy slug="evstream" />
   </div>
 </template>
 

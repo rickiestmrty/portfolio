@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import SegmentedControl from '@/components/settings/SegmentedControl.vue'
 import RangeSlider from '@/components/settings/RangeSlider.vue'
-import ToggleSwitch from '@/components/settings/ToggleSwitch.vue'
 import SettingRow from '@/components/settings/SettingRow.vue'
 import SettingNotice from '@/components/settings/SettingNotice.vue'
 import {
@@ -11,7 +10,6 @@ import {
   baseSalary,
   employmentTypes,
   engagements,
-  familyTax,
   lowOfferNotices,
   meetings,
   negotiateFrom,
@@ -19,14 +17,14 @@ import {
   noticePeriodDays,
   offerRange,
   overlapRange,
+  rangeSpread,
   roleFocuses,
   takeHome,
   teamRegions,
   teamSizes,
-  weekendPremium,
 } from '@/data/settings'
 import { profile } from '@/data/profile'
-import { addDays } from '@/utils/dates'
+import { availableFromLabel } from '@/data/availability'
 
 // All amounts are PHP per month. USD is a display conversion.
 const currency = ref('PHP')
@@ -40,8 +38,6 @@ const roleFocus = ref('full-stack')
 const teamSize = ref('small')
 const meetingsPerWeek = ref(4)
 const takeHomeHours = ref(2)
-const weekends = ref(false)
-const likeFamily = ref(false)
 
 function format(php) {
   if (currency.value === 'USD') return `$${Math.round(php / PHP_PER_USD).toLocaleString('en-US')}`
@@ -60,11 +56,7 @@ const find = (list, value) => list.find((option) => option.value === value)
 
 // Availability
 
-const availableFrom = addDays(new Date(), noticePeriodDays).toLocaleDateString('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-})
+const availableFrom = availableFromLabel
 
 const fullTimeOnly = employmentTypes.map((option) => ({ ...option, hint: option.disabled ? 'Full-time only' : undefined }))
 const longTermOnly = engagements.map((option) => ({ ...option, hint: option.disabled ? 'Long-term only' : undefined }))
@@ -78,7 +70,8 @@ const nightHours = computed(() => Math.max(0, overlapHours.value - region.value.
 
 const meetingsOverLimit = computed(() => Math.max(0, meetingsPerWeek.value - meetings.included))
 
-const breakdown = computed(() => {
+// What moves the range. Only labels are shown, so the exact figure cannot be added up from the page.
+const adjustments = computed(() => {
   const arrangementOption = find(arrangements, arrangement.value)
   const role = find(roleFocuses, roleFocus.value)
   const team = find(teamSizes, teamSize.value)
@@ -88,61 +81,98 @@ const breakdown = computed(() => {
     { label: `${role.label} focus`, amount: role.premium },
     { label: team.premiumLabel, amount: team.premium },
     { label: `Meetings past ${meetings.included}/week`, amount: meetingsOverLimit.value * meetings.premiumPerMeeting },
-    { label: 'Weekend work', amount: weekends.value ? weekendPremium : 0 },
-    { label: '"Like a family" tax', amount: likeFamily.value ? familyTax : 0 },
   ]
-  return [{ label: 'Base', amount: baseSalary }, ...items.filter((item) => item.amount > 0)]
+  return items.filter((item) => item.amount > 0).map((item) => item.label)
 })
 
-const expected = computed(() => breakdown.value.reduce((sum, item) => sum + item.amount, 0))
+// The exact figure. It is never rendered. It only goes into the email behind "Let’s negotiate".
+const expected = computed(
+  () =>
+    baseSalary +
+    find(arrangements, arrangement.value).premium +
+    nightHours.value * nightDifferentialPerHour +
+    find(roleFocuses, roleFocus.value).premium +
+    find(teamSizes, teamSize.value).premium +
+    meetingsOverLimit.value * meetings.premiumPerMeeting,
+)
 
-// The same amount in the other currency.
+const roundToThousand = (php) => Math.round(php / 1000) * 1000
+const rangeLow = computed(() => roundToThousand(expected.value * (1 - rangeSpread)))
+const rangeHigh = computed(() => roundToThousand(expected.value * (1 + rangeSpread)))
+
+const formatRange = (low, high) => `${format(low)} – ${format(high)}`
+const expectedRange = computed(() => formatRange(rangeLow.value, rangeHigh.value))
+
+// The same range in the other currency.
 const expectedSecondary = computed(() => {
-  if (currency.value === 'USD') return `₱${expected.value.toLocaleString('en-US')}`
-  return `≈ $${Math.round(expected.value / PHP_PER_USD).toLocaleString('en-US')}`
+  if (currency.value === 'USD') return `₱${rangeLow.value.toLocaleString('en-US')} – ₱${rangeHigh.value.toLocaleString('en-US')}`
+  const usd = (php) => Math.round(php / PHP_PER_USD).toLocaleString('en-US')
+  return `≈ $${usd(rangeLow.value)} – $${usd(rangeHigh.value)}`
 })
 
 const offerNotice = computed(() => {
   const low = lowOfferNotices.find((notice) => offer.value < notice.below)
   if (low) return low
-  if (offer.value < expected.value) {
-    return { tone: 'warning', text: `${format(expected.value - offer.value)} short of my expectation for this setup.` }
-  }
+  if (offer.value < rangeLow.value) return { tone: 'warning', text: 'This is below my range for this setup.' }
+  if (offer.value < rangeHigh.value) return { tone: 'success', text: 'This is inside my range for this setup. Let’s talk.' }
   return { tone: 'success', text: 'This offer works for me. Let’s talk.' }
 })
 
-const offerMarkers = computed(() => [{ value: expected.value, label: 'My ask', below: true }])
+const offerMarkers = computed(() => [
+  { value: rangeLow.value, label: 'Low', below: true },
+  { value: rangeHigh.value, label: 'High', below: true },
+])
 
 // No button below negotiateFrom.
 const offerAction = computed(() => {
   const amount = `${format(offer.value)}/month`
-  if (offer.value >= expected.value) {
-    return { label: 'Let’s connect', primary: true, subject: `Job offer: ${amount}` }
-  }
-  if (offer.value >= negotiateFrom) {
-    return { label: 'Let’s negotiate', primary: false, subject: `Salary discussion: ${amount}` }
-  }
+  if (offer.value >= rangeHigh.value) return { label: 'Let’s connect', primary: true, subject: `Job offer: ${amount}`, exact: false }
+  if (offer.value >= negotiateFrom) return { label: 'Let’s negotiate', primary: false, subject: `Salary discussion: ${amount}`, exact: true }
   return null
 })
 
-const offerActionHref = computed(
-  () => offerAction.value && `mailto:${profile.email}?subject=${encodeURIComponent(offerAction.value.subject)}`,
-)
+// Built on click so the exact figure is not sitting in the page as a link.
+const openEmail = () => {
+  const action = offerAction.value
+  if (!action) return
+  const lines = [
+    'Hi Nestor,',
+    '',
+    'I would like to talk about a full-time role.',
+    '',
+    `Offer: ${format(offer.value)}/month`,
+    `Setup: ${[
+      find(arrangements, arrangement.value).label,
+      find(roleFocuses, roleFocus.value).label,
+      find(teamSizes, teamSize.value).label,
+      `${region.value.label} team, ${overlapHours.value}h overlap/day`,
+    ].join(', ')}`,
+  ]
+  if (action.exact) {
+    const php = `₱${expected.value.toLocaleString('en-US')}`
+    const usd = `$${Math.round(expected.value / PHP_PER_USD).toLocaleString('en-US')}`
+    lines.push(`Your exact figure for this setup: ${php}/month (about ${usd})`)
+  }
+  const query = `subject=${encodeURIComponent(action.subject)}&body=${encodeURIComponent(lines.join('\n'))}`
+  window.location.href = `mailto:${profile.email}?${query}`
+}
 </script>
 
 <template>
   <div class="page">
     <div class="head">
-      <div class="crumb">Account / Settings</div>
-      <h1>Settings</h1>
-      <p>Tell me what the role looks like. My expected salary updates as you go.</p>
+      <div class="crumb">Account / Hire me</div>
+      <h1>Hire me</h1>
+      <p>
+        Open to full-time roles. Tell me what the role looks like and my expected salary range updates as you go.
+      </p>
     </div>
 
     <section class="card">
       <h2>Work setup</h2>
       <SettingRow
         title="Work arrangement"
-        :description="`Hybrid adds ${formatShort(arrangements[1].premium)}, onsite adds ${formatShort(arrangements[2].premium)}.`"
+        description="Hybrid and onsite raise my range."
       >
         <SegmentedControl v-model="arrangement" :options="arrangements" label="Work arrangement" />
       </SettingRow>
@@ -225,25 +255,11 @@ const offerActionHref = computed(
           </SettingNotice>
         </template>
       </SettingRow>
-      <SettingRow title="Must work weekends" :description="`Adds ${format(weekendPremium)}/month.`">
-        <ToggleSwitch v-model="weekends" label="Must work weekends" />
-      </SettingRow>
-      <SettingRow title="&quot;We're like a family here&quot;">
-        <label class="checkbox">
-          <input v-model="likeFamily" type="checkbox" />
-          That's us
-        </label>
-        <template #below>
-          <SettingNotice v-if="likeFamily" tone="danger">
-            Red flag noted. I already have a family. I'm looking for a job.
-          </SettingNotice>
-        </template>
-      </SettingRow>
     </section>
 
     <section class="card compensation">
       <div class="card-head">
-        <h2>Expected salary</h2>
+        <h2>Expected salary range</h2>
         <SegmentedControl
           v-model="currency"
           :options="[{ value: 'PHP', label: 'PHP' }, { value: 'USD', label: 'USD' }]"
@@ -253,17 +269,21 @@ const offerActionHref = computed(
       </div>
 
       <div class="amount">
-        <span class="amount-value">{{ format(expected) }}</span>
+        <span class="amount-value">{{ expectedRange }}</span>
         <span class="amount-unit">/ month</span>
         <span class="amount-secondary">{{ expectedSecondary }}</span>
       </div>
+      <p class="amount-note">
+        A range for the setup above. Set your offer below, and Let’s negotiate sends the exact figure with your email.
+      </p>
 
-      <ul class="breakdown">
-        <li v-for="item in breakdown" :key="item.label">
-          <span>{{ item.label }}</span>
-          <span>{{ item.label === 'Base' ? '' : '+' }}{{ format(item.amount) }}</span>
-        </li>
-      </ul>
+      <div class="breakdown">
+        <div class="breakdown-title">What moves my range</div>
+        <ul v-if="adjustments.length">
+          <li v-for="label in adjustments" :key="label">{{ label }}</li>
+        </ul>
+        <div v-else class="breakdown-empty">Nothing yet. This is the base of my range.</div>
+      </div>
 
       <SettingRow title="Your offer" :value="`${format(offer)} / month`" description="Before tax. ₱62 = $1.">
         <template #below>
@@ -284,9 +304,9 @@ const offerActionHref = computed(
           <SettingNotice :tone="offerNotice.tone">
             {{ offerNotice.text }}
             <template v-if="offerAction" #action>
-              <a :href="offerActionHref" class="offer-action" :class="{ primary: offerAction.primary }">
+              <button type="button" class="offer-action" :class="{ primary: offerAction.primary }" @click="openEmail">
                 {{ offerAction.label }}
-              </a>
+              </button>
             </template>
           </SettingNotice>
         </template>
@@ -358,22 +378,6 @@ h2 {
   font-family: var(--font-mono);
   font-size: 13px;
 }
-.checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.checkbox input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--danger);
-  cursor: pointer;
-}
-
 .amount {
   display: flex;
   align-items: baseline;
@@ -396,8 +400,11 @@ h2 {
   font-size: 13px;
   color: var(--text-subtle);
 }
+.amount-note {
+  margin-top: 6px;
+  font-size: 13px;
+}
 .breakdown {
-  list-style: none;
   margin: 16px 0 24px;
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -407,16 +414,31 @@ h2 {
   flex-direction: column;
   gap: 8px;
 }
-.breakdown li {
+.breakdown-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.breakdown ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 6px;
+}
+.breakdown li,
+.breakdown-empty {
   font-size: 13px;
   color: var(--text-muted);
 }
-.breakdown li span:last-child {
+.breakdown li::before {
+  content: '+';
+  margin-right: 8px;
   font-family: var(--font-mono);
-  color: var(--text);
+  color: var(--text-subtle);
 }
 .compensation :deep(.row) {
   border-top: 1px solid var(--border-soft);
@@ -431,6 +453,8 @@ h2 {
   color: var(--text-subtle);
 }
 .offer-action {
+  font-family: inherit;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   height: 32px;
@@ -456,5 +480,14 @@ h2 {
 .offer-action.primary:hover {
   border-color: var(--accent);
   background: var(--accent);
+}
+@media (max-width: 640px) {
+  .amount-value {
+    font-size: 28px;
+  }
+  .amount-secondary {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 </style>

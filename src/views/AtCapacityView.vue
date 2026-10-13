@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import ServiceCard from '@/components/at-capacity/ServiceCard.vue'
 import SyncStatus from '@/components/at-capacity/SyncStatus.vue'
+import ShippedTimeline from '@/components/at-capacity/ShippedTimeline.vue'
+import ProjectDemo from '@/components/ProjectDemo.vue'
+import ProjectCaseStudy from '@/components/ProjectCaseStudy.vue'
 import { services } from '@/data/atCapacity'
 
 defineProps({ title: { type: String, required: true } })
@@ -16,26 +19,32 @@ const showApi = ref(false)
       <h1>{{ title }}</h1>
       <p>
         An ad automation platform I helped build. It pauses Google Ads when a business is too busy to take new work, so
-        no budget goes to leads it can't serve. The cards below are a demo. Hover over a day to see why its ads are paused.
+        no budget goes to leads it can't serve.
       </p>
     </div>
 
-    <div class="toolbar">
-      <button
-        type="button"
-        role="switch"
-        class="switch"
-        :aria-checked="showApi"
-        @click="showApi = !showApi"
-      >
-        <span class="knob" aria-hidden="true"></span>
-        Show the API
-      </button>
-      <span class="hint">{{ showApi ? 'Each outlined area shows the endpoint I built to feed it.' : 'See which endpoint powers each part of the screen.' }}</span>
-      <SyncStatus class="sync-status" :show-api="showApi" />
-    </div>
+    <ProjectDemo title="See when ads pause" intro="Each card is one service. Hover over a day to see why its ads are paused.">
+      <div class="toolbar">
+        <button
+          type="button"
+          role="switch"
+          class="switch"
+          :aria-checked="showApi"
+          @click="showApi = !showApi"
+        >
+          <span class="knob" aria-hidden="true"></span>
+          Show the API
+        </button>
+        <span class="hint">{{ showApi ? 'Each outlined area shows the endpoint I built to feed it.' : 'See which endpoint powers each part of the screen.' }}</span>
+        <SyncStatus class="sync-status" :show-api="showApi" />
+      </div>
 
-    <ServiceCard v-for="service in services" :key="service.id" :service="service" :show-api="showApi" />
+      <ServiceCard v-for="service in services" :key="service.id" :service="service" :show-api="showApi" />
+    </ProjectDemo>
+
+    <ProjectCaseStudy slug="at-capacity">
+      <ShippedTimeline />
+    </ProjectCaseStudy>
   </div>
 </template>
 

@@ -4,27 +4,22 @@ import { projects } from '@/data/projects'
 
 const emit = defineEmits(['done'])
 
-const COMMAND = 'nestor run dev'
+const COMMAND = 'npm run dev'
 
-// Each line: text, optional tone (ok/info/warn/muted), delay before it prints (ms).
+// Each line: text, optional tone (ok/info/muted), delay before it prints (ms).
 const OUTPUT = [
-  { text: '> portfolio@0.1.0 dev', tone: 'muted', delay: 180 },
-  { text: '> vite --host nestor', tone: 'muted', delay: 90 },
-  { text: '', delay: 120 },
-  { text: 'building for development...', tone: 'info', delay: 220 },
-  { text: '✓ resolved dependencies', tone: 'ok', delay: 260 },
-  { text: `✓ compiled ${projects.length} projects`, tone: 'ok', delay: 200 },
-  { text: '✓ loaded profile.js', tone: 'ok', delay: 160 },
-  { text: '⚠ coffee level low, continuing anyway', tone: 'warn', delay: 240 },
-  { text: '✓ transformed 128 modules', tone: 'ok', delay: 200 },
-  { text: '', delay: 100 },
-  { text: 'ready in 1.24s  ➜  opening dashboard', tone: 'info', delay: 260 },
+  { text: '> portfolio@0.1.0 dev', tone: 'muted', delay: 100 },
+  { text: '> vite', tone: 'muted', delay: 60 },
+  { text: '', delay: 60 },
+  { text: '✓ profile loaded', tone: 'ok', delay: 130 },
+  { text: `✓ ${projects.length} projects loaded`, tone: 'ok', delay: 110 },
+  { text: '', delay: 60 },
+  { text: 'Ready. Opening dashboard.', tone: 'info', delay: 140 },
 ]
 
 const typed = ref('')
 const lines = ref([])
 const phase = ref('boot') // boot → typing → output → loading → leaving
-const progress = ref(0)
 
 let timers = []
 let cancelled = false
@@ -39,18 +34,18 @@ const finish = () => {
   timers.forEach(clearTimeout)
   timers = []
   phase.value = 'leaving'
-  setTimeout(() => emit('done'), 350)
+  setTimeout(() => emit('done'), 300)
 }
 
 const run = async () => {
-  await wait(700)
+  await wait(300)
   phase.value = 'typing'
   for (const ch of COMMAND) {
     if (cancelled) return
     typed.value += ch
-    await wait(55 + Math.random() * 70)
+    await wait(35 + Math.random() * 35)
   }
-  await wait(350)
+  await wait(200)
   if (cancelled) return
   phase.value = 'output'
   for (const line of OUTPUT) {
@@ -58,16 +53,11 @@ const run = async () => {
     if (cancelled) return
     lines.value.push(line)
   }
-  await wait(450)
+  await wait(300)
   if (cancelled) return
+  // Skeleton of the dashboard while the real one settles underneath.
   phase.value = 'loading'
-  // Fill the bar in uneven steps so it feels like real work.
-  for (const step of [18, 41, 57, 76, 92, 100]) {
-    await wait(110 + Math.random() * 90)
-    if (cancelled) return
-    progress.value = step
-  }
-  await wait(250)
+  await wait(900)
   finish()
 }
 
@@ -87,12 +77,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="intro" :class="{ leaving: phase === 'leaving' }" role="status" aria-label="Loading portfolio">
+  <div
+    class="intro"
+    :class="{ loading: phase === 'loading' || phase === 'leaving', leaving: phase === 'leaving' }"
+    role="status"
+    aria-label="Loading portfolio"
+  >
     <Transition name="swap">
       <div v-if="phase !== 'loading' && phase !== 'leaving'" key="term" class="term">
         <div class="bar">
           <span class="dot" /><span class="dot" /><span class="dot" />
-          <span class="title">nestor — zsh</span>
+          <span class="title">portfolio — zsh</span>
         </div>
         <div class="screen">
           <div class="row">
@@ -101,15 +96,31 @@ onBeforeUnmount(() => {
             <span class="cmd">{{ typed }}</span>
             <span v-if="phase === 'boot' || phase === 'typing'" class="cursor" :class="{ solid: phase === 'typing' }" />
           </div>
-          <div v-for="(line, i) in lines" :key="i" class="row out" :class="line.tone">{{ line.text || ' ' }}</div>
+          <div v-for="(line, i) in lines" :key="i" class="row out" :class="line.tone">{{ line.text || ' ' }}</div>
           <div v-if="phase === 'output'" class="row"><span class="cursor" /></div>
         </div>
       </div>
 
-      <div v-else key="load" class="loader">
-        <div class="brand">nestor<span class="blink">_</span></div>
-        <div class="track"><div class="fill" :style="{ width: progress + '%' }" /></div>
-        <div class="pct">{{ progress }}%</div>
+      <div v-else key="load" class="skeleton" aria-hidden="true">
+        <div class="sk-header">
+          <span class="sk sk-brand"></span>
+          <span class="sk sk-avatar"></span>
+        </div>
+        <div class="sk-body">
+          <div class="sk-side">
+            <span v-for="n in 6" :key="n" class="sk sk-nav"></span>
+          </div>
+          <div class="sk-main">
+            <span class="sk sk-title"></span>
+            <span class="sk sk-line"></span>
+            <span class="sk sk-line short"></span>
+            <span class="sk sk-card grid"></span>
+            <div class="sk-cards">
+              <span class="sk sk-card"></span>
+              <span class="sk sk-card"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </Transition>
 
@@ -128,20 +139,21 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   padding: 16px;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.3s ease, background-color 0.25s ease;
+}
+/* The skeleton uses the app's own light palette, so the hand-off to the real page is quiet. */
+.intro.loading {
+  background: var(--bg);
 }
 .intro.leaving {
   opacity: 0;
   pointer-events: none;
 }
 
-.term,
-.loader {
-  /* Share one grid cell so the terminal and loader crossfade in place. */
-  grid-area: 1 / 1;
-}
 .term {
-  width: min(680px, 100%);
+  /* Share one grid cell with the skeleton so they crossfade in place. */
+  grid-area: 1 / 1;
+  width: min(640px, 100%);
   background: var(--ev-surface);
   border: 1px solid var(--ev-border);
   border-radius: var(--radius-lg);
@@ -169,7 +181,7 @@ onBeforeUnmount(() => {
 }
 .screen {
   padding: 18px 20px 22px;
-  min-height: 320px;
+  min-height: 200px;
   font-size: 14px;
   line-height: 1.7;
 }
@@ -199,9 +211,6 @@ onBeforeUnmount(() => {
 .out.info {
   color: var(--term-info);
 }
-.out.warn {
-  color: var(--term-warn);
-}
 
 .cursor {
   display: inline-block;
@@ -219,38 +228,98 @@ onBeforeUnmount(() => {
   }
 }
 
-.loader {
-  width: min(320px, 100%);
+/* Skeleton of the dashboard: header, sidebar, heading, text, grid card, two cards. */
+.skeleton {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
+}
+.sk {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border-soft) 0%, var(--border) 50%, var(--border-soft) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.sk-header {
+  height: var(--header-h);
+  padding: 0 24px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.sk-brand {
+  width: 160px;
+  height: 18px;
+}
+.sk-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.sk-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.sk-side {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  padding: 20px 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sk-nav {
+  height: 36px;
+}
+.sk-main {
+  flex: 1;
+  min-width: 0;
+  max-width: 1160px;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sk-title {
+  width: min(280px, 70%);
+  height: 30px;
+}
+.sk-line {
+  width: min(640px, 100%);
+  height: 14px;
+}
+.sk-line.short {
+  width: min(420px, 70%);
+}
+.sk-card {
+  height: 180px;
+  border-radius: var(--radius-lg);
+}
+.sk-card.grid {
+  margin-top: 20px;
+  height: 200px;
+}
+.sk-cards {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-}
-.brand {
-  font-family: var(--font);
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.blink {
-  color: var(--term-ok);
-  animation: blink 1s steps(1) infinite;
-}
-.track {
-  width: 100%;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--ev-border);
-  overflow: hidden;
-}
-.fill {
-  height: 100%;
-  background: var(--term-ok);
-  transition: width 0.18s ease-out;
-}
-.pct {
-  font-size: 12px;
-  color: var(--ev-text-subtle);
 }
 
 .skip {
@@ -270,25 +339,48 @@ onBeforeUnmount(() => {
   color: var(--ev-text);
   background: var(--ev-hover);
 }
+.intro.loading .skip {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.intro.loading .skip:hover {
+  color: var(--text);
+  background: var(--hover);
+}
 
 .swap-enter-active,
 .swap-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.25s ease;
 }
-.swap-enter-from {
-  opacity: 0;
-  transform: scale(0.98);
+.swap-leave-active {
+  position: absolute;
 }
+.swap-enter-from,
 .swap-leave-to {
   opacity: 0;
-  transform: scale(1.02);
 }
 
 @media (max-width: 768px) {
   .screen {
     font-size: 12.5px;
     padding: 14px 14px 18px;
-    min-height: 280px;
+  }
+  .sk-header {
+    padding: 0 16px;
+  }
+  .sk-side {
+    display: none;
+  }
+  .sk-main {
+    padding: 20px 16px;
+  }
+  .sk-cards {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
   }
 }
 </style>

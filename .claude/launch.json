@@ -1,6 +1,8 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "portfolio", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5173 }
+    { "name": "portfolio", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5173 },
+    { "name": "portfolio-alt", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--", "--port", "5174", "--strictPort"], "port": 5174 },
+    { "name": "fridge-intro", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "/Users/nestordesabillejr/Dev/Freelance/fridge-intro", "run", "dev", "--", "--port", "5180", "--strictPort"], "port": 5180 }
   ]
 }

@@ -1,6 +1,11 @@
 <script setup>
 import { engagementLabel, projects } from '@/data/projects'
 import { formatRange } from '@/utils/dates'
+
+const MAX_STACK = 5
+
+// A study value starting with 'TODO' is a fact still to fill in, so it stays off the card.
+const hasResult = (p) => p.study?.result && !p.study.result.startsWith('TODO')
 </script>
 
 <template>
@@ -24,14 +29,20 @@ import { formatRange } from '@/utils/dates'
           <p>{{ p.tagline }}</p>
         </div>
 
+        <div v-if="hasResult(p)" class="result">
+          <span class="result-label">Result</span>
+          <span class="result-text">{{ p.study.result }}</span>
+        </div>
+
         <ul v-if="p.stack.length" class="stack">
-          <li v-for="s in p.stack" :key="s">{{ s }}</li>
+          <li v-for="s in p.stack.slice(0, MAX_STACK)" :key="s">{{ s }}</li>
+          <li v-if="p.stack.length > MAX_STACK" class="more">+{{ p.stack.length - MAX_STACK }}</li>
         </ul>
 
         <div class="foot">
           <span class="meta">{{ p.start ? formatRange(p.start, p.end, p.since) : 'Dates TBD' }}</span>
           <span class="open">
-            View demo
+            View case study
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
           </span>
         </div>
@@ -114,6 +125,30 @@ p {
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-muted);
+}
+.result {
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.result-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.result-text {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text);
+}
+.stack li.more {
+  border-style: dashed;
 }
 .stack {
   margin: 0;
