@@ -233,7 +233,8 @@ const selectedRoom = computed(() => rooms.find((r) => r.id === selected.value?.r
 /* Fill the whole main area (cancels its padding) with the success green. */
 .page {
   margin: calc(-1 * var(--main-pad-y)) calc(-1 * var(--main-pad-x));
-  padding: var(--main-pad-y) var(--main-pad-x);
+  /* Side padding grows on wide screens so the content stays centered while the background stays full-bleed. */
+  padding: var(--main-pad-y) max(var(--main-pad-x), calc((100% - var(--content-max)) / 2));
   min-height: calc(100% + 2 * var(--main-pad-y));
   background: var(--status-confirmed);
   color: var(--on-brand);

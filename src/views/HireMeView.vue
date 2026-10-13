@@ -321,6 +321,7 @@ const openEmail = () => {
   flex-direction: column;
   gap: 24px;
   max-width: 760px;
+  margin-inline: auto;
 }
 .head {
   display: flex;

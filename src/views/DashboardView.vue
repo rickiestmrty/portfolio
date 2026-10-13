@@ -49,7 +49,8 @@ const stats = [
 
 <style scoped>
 .page {
-  max-width: 1080px;
+  max-width: var(--content-max);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: 32px;

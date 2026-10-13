@@ -53,7 +53,8 @@ const showApi = ref(false)
    Full-strength lime is too bright to read text on. */
 .page {
   margin: calc(-1 * var(--main-pad-y)) calc(-1 * var(--main-pad-x));
-  padding: var(--main-pad-y) var(--main-pad-x);
+  /* Side padding grows on wide screens so the content stays centered while the background stays full-bleed. */
+  padding: var(--main-pad-y) max(var(--main-pad-x), calc((100% - var(--content-max)) / 2));
   min-height: calc(100% + 2 * var(--main-pad-y));
   background: color-mix(in srgb, var(--brand-at-capacity) 28%, var(--bg));
   display: flex;

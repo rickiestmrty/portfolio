@@ -225,6 +225,8 @@ const selectedCell = computed(() => selected.value && prices[selected.value.runn
 
 <style scoped>
 .page {
+  max-width: var(--content-max);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: 24px;

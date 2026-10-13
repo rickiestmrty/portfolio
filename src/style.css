@@ -42,6 +42,8 @@
   --radius-lg: 12px;
   --header-h: 64px;
   --sidebar-w: 260px;
+  /* Width of page content. Pages center on it, so wide screens do not push content to the left. */
+  --content-max: 1080px;
   --font: 'Geist', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 }

@@ -345,7 +345,8 @@ const onSend = ({ id, driver }) => {
 /* Fill the whole main area (cancels its padding) with the MyConsumables navy. */
 .page {
   margin: calc(-1 * var(--main-pad-y)) calc(-1 * var(--main-pad-x));
-  padding: var(--main-pad-y) var(--main-pad-x);
+  /* Side padding grows on wide screens so the content stays centered while the background stays full-bleed. */
+  padding: var(--main-pad-y) max(var(--main-pad-x), calc((100% - var(--content-max)) / 2));
   min-height: calc(100% + 2 * var(--main-pad-y));
   background: var(--brand-myconsumables);
   color: var(--on-brand);
